@@ -6,7 +6,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { audit } from "@/lib/admin/audit";
 import { settingsSchema } from "@/validations/settings";
 
-const BOOLS = ["ads_enabled", "crypto_enabled", "signups_enabled", "maintenance_mode", "comment_auto_approve", "tips_enabled"] as const;
+const BOOLS = ["ads_enabled", "crypto_enabled", "signups_enabled", "maintenance_mode", "comment_auto_approve", "tips_enabled", "bank_enabled"] as const;
 
 export async function saveSettings(fd: FormData): Promise<void> {
   const staff = await requireAdmin();
@@ -15,6 +15,9 @@ export async function saveSettings(fd: FormData): Promise<void> {
   const parsed = settingsSchema.safeParse(Object.fromEntries(fd));
   if (!parsed.success) redirect(`/admin/settings?e=invalid&f=${encodeURIComponent(String(parsed.error.issues[0].path[0] ?? ""))}`);
   const v = parsed.data;
+  if (fd.get("bank_enabled") === "on" && (!v.bank_name || !v.bank_account_name || !/^\d{10}$/.test(v.bank_account_number))) {
+    redirect("/admin/settings?e=bank_details");
+  }
 
   const admin = supabaseAdmin();
   const { data: old } = await admin.from("site_settings").select("key,value");
@@ -44,6 +47,13 @@ export async function saveSettings(fd: FormData): Promise<void> {
     tip_min_kobo: Math.round(v.tip_min_naira * 100),
     tip_max_kobo: Math.round(v.tip_max_naira * 100),
     tip_daily_cap_kobo: Math.round(v.tip_daily_cap_naira * 100),
+    bank_name: v.bank_name,
+    bank_account_name: v.bank_account_name,
+    bank_account_number: v.bank_account_number,
+    bank_min_kobo: Math.round(v.bank_min_naira * 100),
+    bank_max_kobo: Math.round(v.bank_max_naira * 100),
+    bank_expiry_hours: v.bank_expiry_hours,
+    bank_max_pending: v.bank_max_pending,
   };
   for (const b of BOOLS) next[b] = fd.get(b) === "on";
 

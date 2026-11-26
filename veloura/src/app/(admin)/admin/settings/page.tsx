@@ -7,6 +7,7 @@ import { saveSettings } from "./actions";
 
 const ERR: Record<string, string> = {
   rate_jump: "The exchange rate changed by more than 15%. Tick the confirmation box if that is intended.",
+  bank_details: "To switch on bank transfers, enter the bank name, account name and a 10-digit account number.",
   failed: "Could not save. Try again.",
 };
 
@@ -26,6 +27,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
   const { data } = await supabaseAdmin().from("site_settings").select("key,value,updated_at");
   const rows = (data ?? []) as { key: string; value: unknown; updated_at: string | null }[];
   const val = (k: string, d: number) => { const n = Number(rows.find((r) => r.key === k)?.value); return Number.isFinite(n) ? n : d; };
+  const text = (k: string) => { const v = rows.find((r) => r.key === k)?.value; return typeof v === "string" ? v : ""; };
   const flag = (k: string, d: boolean) => { const r = rows.find((x) => x.key === k); return r ? r.value === true : d; };
   const rateAt = rows.find((r) => r.key === "usd_ngn_rate")?.updated_at;
 
@@ -63,6 +65,24 @@ export default async function Settings({ searchParams }: { searchParams: Promise
         <Field label="Points per premium view" name="weight_view" value={val("weight_view", 1)} step="1" hint="Each day's creator pool is split by points. Changes apply to days not yet paid." />
         <Field label="Points per reaction" name="weight_reaction" value={val("weight_reaction", 2)} step="1" />
         <Field label="Points per approved comment" name="weight_comment" value={val("weight_comment", 3)} step="1" />
+      </section>
+
+      <section className="grid gap-4 rounded-2xl border border-line bg-card p-5 sm:grid-cols-2">
+        <h2 className="font-semibold sm:col-span-2">Bank transfer top-ups</h2>
+        <label className="flex items-start gap-2 text-sm sm:col-span-2">
+          <input type="checkbox" name="bank_enabled" defaultChecked={flag("bank_enabled", false)} className="mt-0.5" />
+          <span>Let readers top up by bank transfer (you approve each one in Admin, Bank transfers)</span>
+        </label>
+        <label className="grid gap-1.5 text-sm"><span>Bank name</span>
+          <input name="bank_name" defaultValue={text("bank_name")} maxLength={80} className={inputCls} /></label>
+        <label className="grid gap-1.5 text-sm"><span>Account name</span>
+          <input name="bank_account_name" defaultValue={text("bank_account_name")} maxLength={80} className={inputCls} /></label>
+        <label className="grid gap-1.5 text-sm"><span>Account number (10 digits)</span>
+          <input name="bank_account_number" defaultValue={text("bank_account_number")} inputMode="numeric" maxLength={10} className={inputCls} /></label>
+        <Field label="Minimum top-up (₦)" name="bank_min_naira" value={val("bank_min_kobo", 50000) / 100} />
+        <Field label="Maximum top-up (₦)" name="bank_max_naira" value={val("bank_max_kobo", 5000000) / 100} hint="Only admins can change these limits." />
+        <Field label="Request expires after (hours)" name="bank_expiry_hours" value={val("bank_expiry_hours", 24)} step="1" hint="Requests the reader never marks as paid expire. You can still approve a late payment." />
+        <Field label="Open requests per reader" name="bank_max_pending" value={val("bank_max_pending", 3)} step="1" />
       </section>
 
       <section className="grid gap-4 rounded-2xl border border-line bg-card p-5 sm:grid-cols-2">

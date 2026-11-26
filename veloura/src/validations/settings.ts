@@ -19,8 +19,16 @@ export const settingsSchema = z
     tip_min_naira: z.coerce.number().min(1).max(1000000),
     tip_max_naira: z.coerce.number().min(1).max(10000000),
     tip_daily_cap_naira: z.coerce.number().min(1).max(100000000),
+    bank_name: z.string().trim().max(80),
+    bank_account_name: z.string().trim().max(80),
+    bank_account_number: z.string().trim().regex(/^(\d{10})?$/, "Account number must be 10 digits"),
+    bank_min_naira: z.coerce.number().min(1).max(1000000),
+    bank_max_naira: z.coerce.number().min(1).max(1000000),
+    bank_expiry_hours: z.coerce.number().int().min(1).max(168),
+    bank_max_pending: z.coerce.number().int().min(1).max(10),
   })
   .refine((v) => v.max_topup_usd > v.min_topup_usd, { message: "Maximum top-up must be above the minimum", path: ["max_topup_usd"] })
+  .refine((v) => v.bank_max_naira >= v.bank_min_naira, { message: "Maximum must be at least the minimum", path: ["bank_max_naira"] })
   .refine((v) => v.tip_max_naira >= v.tip_min_naira, { message: "Maximum tip must be at least the minimum", path: ["tip_max_naira"] })
   .refine((v) => v.tip_daily_cap_naira >= v.tip_max_naira, { message: "Daily cap must be at least the maximum tip", path: ["tip_daily_cap_naira"] })
   .refine((v) => v.full_pass_naira >= v.daily_price_naira, { message: "Full Pass should cost at least one category", path: ["full_pass_naira"] });

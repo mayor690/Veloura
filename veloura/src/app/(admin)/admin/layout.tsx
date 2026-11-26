@@ -12,6 +12,7 @@ const NAV: { href: string; label: string; adminOnly?: boolean }[] = [
   { href: "/admin/moderation", label: "Moderation" },
   { href: "/admin/users", label: "Users", adminOnly: true },
   { href: "/admin/payments", label: "Payments", adminOnly: true },
+  { href: "/admin/bank-transfers", label: "Bank transfers", adminOnly: true },
   { href: "/admin/earnings", label: "Earnings", adminOnly: true },
   { href: "/admin/payouts", label: "Payouts", adminOnly: true },
   { href: "/admin/ads", label: "Ads", adminOnly: true },
@@ -27,11 +28,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!staff) notFound(); // do not reveal that /admin exists
 
   // The urgent banner is on EVERY admin page so urgent reports can never be buried.
-  const [{ data }, comments, { count: postsPending }] = await Promise.all([
+  const [{ data }, comments, { count: postsPending }, { count: bankWaiting }] = await Promise.all([
     supabaseAdmin().from("reports").select("post_id,created_at")
       .eq("status", "open").eq("is_urgent", true).order("created_at", { ascending: true }).limit(500),
     commentQueueCounts(),
     supabaseAdmin().from("posts").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    staff.role === "admin"
+      ? supabaseAdmin().from("bank_transfers").select("id", { count: "exact", head: true }).eq("status", "submitted")
+      : Promise.resolve({ count: 0 }),
   ]);
   const modWaiting = (postsPending ?? 0) + comments.total;
   const urgent = (data ?? []) as { post_id: string; created_at: string }[];
@@ -54,6 +58,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           {NAV.filter((n) => !n.adminOnly || staff.role === "admin").map((n) => (
             <Link key={n.href} href={n.href} className="shrink-0 rounded-full px-3 py-1.5 text-muted hover:bg-card hover:text-white">
               {n.label}
+              {n.href === "/admin/bank-transfers" && (bankWaiting ?? 0) > 0 && (
+                <span className="ml-1.5 rounded-full bg-purple/25 px-1.5 py-0.5 text-xs font-semibold text-purple">{bankWaiting}</span>
+              )}
               {n.href === "/admin/moderation" && modWaiting > 0 && (
                 <span className="ml-1.5 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-xs font-semibold text-amber-300">{modWaiting}</span>
               )}

@@ -3,10 +3,13 @@ import { nowpayments } from "@/lib/payments/nowpayments";
 import { loadFx } from "@/lib/payments/settings";
 import { effectiveMinUsdCents, koboToUsdCentsCeil } from "@/lib/payments/fx";
 import { TopupForm } from "@/components/payments/TopupForm";
+import { bankReady, loadBankSettings } from "@/lib/payments/bank";
 
 export default async function Topup() {
   const fx = await loadFx();
   const ready = nowpayments.configured() && !!fx && fx.cryptoEnabled;
+  const bank = await loadBankSettings();
+  const bankOn = bankReady(bank);
 
   return (
     <main className="mx-auto max-w-md px-4 py-8">
@@ -35,8 +38,14 @@ export default async function Topup() {
           })()
         ) : (
           <div className="rounded-2xl border border-line bg-card p-5 text-sm text-muted">
-            Crypto top-ups are unavailable right now. Please check back soon.
+            Crypto top-ups are unavailable right now.{bankOn ? "" : " Please check back soon."}
           </div>
+        )}
+        {bankOn && (
+          <Link href="/checkout/bank" className="mt-4 block rounded-2xl border border-line bg-card p-5 text-sm hover:border-purple">
+            <span className="font-semibold">Pay by bank transfer</span>
+            <span className="mt-1 block text-muted">Send Naira from your bank and we credit your wallet once it arrives.</span>
+          </Link>
         )}
       </div>
     </main>
