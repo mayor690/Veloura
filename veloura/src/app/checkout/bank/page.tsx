@@ -44,6 +44,8 @@ export default async function BankTopup({ searchParams }: { searchParams: Promis
     .select("id,reference,amount_kobo,status,expires_at,created_at,approved_amount_kobo,review_note")
     .eq("user_id", user.id).order("created_at", { ascending: false }).limit(10);
   const rows = (data ?? []) as T[];
+  const { data: me } = await admin.from("profiles").select("username").eq("id", user.id).single();
+  const username = me?.username ?? "";
   const open = rows.filter((r) => r.status === "pending" || r.status === "submitted");
   const past = rows.filter((r) => !open.includes(r));
   const msg = sp.e ? MSG[sp.e] ?? MSG.failed : sp.ok ? MSG[sp.ok] : null;
@@ -59,6 +61,18 @@ export default async function BankTopup({ searchParams }: { searchParams: Promis
         <div className="mt-6 rounded-2xl border border-line bg-card p-5 text-sm text-muted">Bank transfer top-ups are unavailable right now. Please check back soon.</div>
       ) : (
         <>
+          <section className="mt-6 grid gap-3 rounded-2xl border border-line bg-card p-5 text-sm">
+            <h2 className="font-semibold">Send a transfer</h2>
+            <dl className="grid gap-1.5">
+              <div className="flex justify-between gap-3"><dt className="text-muted">Bank</dt><dd>{s.bankName}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-muted">Account name</dt><dd>{s.accountName}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-muted">Account number</dt><dd className="font-mono">{s.accountNumber}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-muted">Narration / remark</dt><dd className="font-mono font-semibold">{username}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-muted">Amount</dt><dd>{naira(s.minKobo)} to {naira(s.maxKobo)}</dd></div>
+            </dl>
+            <p className="text-xs text-muted">Put your username <span className="font-mono">{username}</span> in the narration so we know whose wallet to credit. We add the money after we see it in our account, usually within a few hours. Bank and P2P transfers both work.</p>
+          </section>
+
           {open.map((t) => (
             <section key={t.id} className="mt-6 grid gap-3 rounded-2xl border border-purple/60 bg-card p-5 text-sm">
               <div className="flex items-center justify-between">
@@ -91,9 +105,9 @@ export default async function BankTopup({ searchParams }: { searchParams: Promis
 
           {open.length < s.maxPending && (
             <form action={requestBankTransfer} className="mt-6 grid gap-3 rounded-2xl border border-line bg-card p-5">
-              <h2 className="font-semibold">New top-up</h2>
+              <h2 className="font-semibold">Want a unique reference? (optional)</h2>
               <input name="amount" type="number" step="1" min={s.minKobo / 100} max={s.maxKobo / 100} required placeholder={`Amount in ₦ (${naira(s.minKobo)} to ${naira(s.maxKobo)})`} className={input} />
-              <button className="h-12 rounded-xl bg-accent-gradient font-semibold">Get payment details</button>
+              <button className="h-12 rounded-xl bg-accent-gradient font-semibold">Get a reference</button>
               <p className="text-xs text-muted">Your bank statement will show your name to us. We keep it private and use it only to match your payment.</p>
             </form>
           )}

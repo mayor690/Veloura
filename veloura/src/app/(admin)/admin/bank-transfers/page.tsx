@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { Badge, btn, inputCls } from "@/components/admin/ui";
 import { naira, ago } from "@/lib/constants";
-import { approveBankTransfer, rejectBankTransfer } from "./actions";
+import { approveBankTransfer, creditFromBankAlert, rejectBankTransfer } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,10 @@ type T = {
 };
 const SEL = "id,reference,amount_kobo,status,sender_note,created_at,submitted_at,expires_at,approved_amount_kobo,review_note,reviewed_at,profiles!bank_transfers_user_id_fkey(username)";
 const MSG: Record<string, [string, boolean]> = {
-  approved: ["Approved. The wallet was credited.", true], rejected: ["Rejected.", true],
+  approved: ["Approved. The wallet was credited.", true], rejected: ["Rejected.", true], credited: ["Done. The reader's wallet was credited.", true],
+  user_not_found: ["No reader with that username.", false], ambiguous_user: ["More than one account matches that username. Check the spelling and capitals.", false],
+  bad_reference: ["Enter the reference from your bank alert (3 to 60 characters).", false],
+  duplicate_reference: ["That bank reference was already used to credit a wallet. Check before crediting again.", false],
   not_open: ["That request was already handled.", false], bad_amount: ["Enter a valid amount.", false],
   banned: ["That account is banned, so it can't be credited.", false], failed: ["Something went wrong. Try again.", false],
 };
@@ -37,10 +40,26 @@ export default async function BankTransfers({ searchParams }: { searchParams: Pr
     <div className="grid gap-5">
       <h1 className="font-display text-3xl">Bank transfers</h1>
       <p className="rounded-xl border border-line bg-card p-4 text-sm text-muted">
-        Approve a request only after the money has actually arrived in your bank account, matching the reference. Never approve from a screenshot or a message.
-        Approving credits the reader&apos;s wallet once; you can change the amount if they sent more or less. &quot;Waiting for me&quot; means the reader says they have paid.
+        Credit or approve only after the money has actually arrived in your bank account. Never act on a screenshot or a message.
+        Crediting adds to the reader&apos;s wallet once; you can change the amount if they sent more or less. &quot;Reader says paid&quot; means they asked for a reference and tapped I&apos;ve paid.
       </p>
       {msg && <p className={`rounded-xl p-3 text-sm ${msg[1] ? "bg-emerald-500/15 text-emerald-300" : "bg-rose/15 text-rose"}`}>{msg[0]}</p>}
+
+      <section className="grid gap-3 rounded-2xl border border-purple/50 bg-card p-5 text-sm">
+        <h2 className="font-semibold">Credit a reader from a bank alert</h2>
+        <p className="text-xs text-muted">
+          For a normal transfer or P2P payment where the reader never made a request here. Enter the reader&apos;s username (they should put it in the narration),
+          the amount that reached your account, and the bank&apos;s own reference or session ID for that credit. The same reference can only be used once,
+          so the same alert can never credit twice.
+        </p>
+        <form action={creditFromBankAlert} className="grid gap-2 sm:grid-cols-2">
+          <input name="username" required maxLength={30} placeholder="Reader username" className={inputCls} />
+          <input name="amount" type="number" step="0.01" min="1" required placeholder="Amount received (₦)" className={inputCls} />
+          <input name="reference" required minLength={3} maxLength={60} placeholder="Bank reference / session ID from the alert" className={inputCls} />
+          <input name="note" maxLength={200} placeholder="Note (optional)" className={inputCls} />
+          <button className={`${btn} bg-emerald-600 sm:col-span-2`}>Credit wallet</button>
+        </form>
+      </section>
 
       <section className="grid gap-3">
         <h2 className="font-semibold">Open requests ({open.length})</h2>

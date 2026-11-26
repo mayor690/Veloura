@@ -407,6 +407,32 @@ check("bank: browser cannot call approve", raises("select approve_bank_transfer(
 check("bank: browser cannot read bank transfers", one("select count(*) from bank_transfers") == 0)
 cur.execute("reset role")
 
+# ---- migration 0014: credit straight from a bank alert ----
+cur.execute("reset role")
+setting("bank_enabled", "true")
+W = V3
+w0 = bal(W)
+d = one("select credit_bank_transfer_direct(%s,'viewer_3',200000,'  nip/abc123 ','p2p')", (MOD,))
+check("direct: credits the reader without any request", bal(W) == w0 + 200000 and d["credited_kobo"] == 200000)
+check("direct: bank reference is stored uppercase and prefixed", one("select count(*) from bank_transfers where reference='EXT-NIP/ABC123' and status='approved'") == 1)
+check("direct: the same bank alert cannot credit twice", raises("select credit_bank_transfer_direct(%s,'viewer_3',200000,'NIP/ABC123','')", (MOD,), "duplicate_reference") and bal(W) == w0 + 200000)
+check("direct: username match ignores capitals", one("select credit_bank_transfer_direct(%s,'VIEWER_3',100,'ref-two','')", (MOD,))["credited_kobo"] == 100)
+check("direct: unknown username refused", raises("select credit_bank_transfer_direct(%s,'nobody_here',1000,'ref-three','')", (MOD,), "user_not_found"))
+check("direct: bad amount and bad reference refused", raises("select credit_bank_transfer_direct(%s,'viewer_3',0,'ref-four','')", (MOD,), "bad_amount")
+      and raises("select credit_bank_transfer_direct(%s,'viewer_3',1000,'ab','')", (MOD,), "bad_reference"))
+cur.execute("update profiles set is_banned = true where id=%s", (W,))
+check("direct: a banned account cannot be credited", raises("select credit_bank_transfer_direct(%s,'viewer_3',1000,'ref-five','')", (MOD,), "banned"))
+cur.execute("update profiles set is_banned = false where id=%s", (W,))
+rq = one("select request_bank_transfer(%s,50000)", (W,))
+before = bal(W)
+d2 = one("select credit_bank_transfer_direct(%s,'someone_else',50000,%s,'')", (MOD, rq["reference"]))
+check("direct: a matching open request is approved instead (right reader, no duplicate)", bal(W) == before + 50000
+      and one("select status from bank_transfers where id=%s", (rq["id"],)) == "approved")
+check("direct: credits create manual top-up payments", one("select count(*) from payments where provider='manual' and item_kind='topup' and user_id=%s", (W,)) >= 3)
+cur.execute("set role authenticated")
+check("direct: browser cannot call it", raises("select credit_bank_transfer_direct(%s,'viewer_3',1000,'ref-six','')", (MOD,), "permission denied"))
+cur.execute("reset role")
+
 print(f"\n{passed} checks passed, {len(failures)} failed")
 for f in failures: print("  FAIL:", f)
 sys.exit(1 if failures else 0)

@@ -34,3 +34,21 @@ export async function rejectBankTransfer(fd: FormData): Promise<void> {
   }
   back("ok=rejected");
 }
+
+/** Credit a reader straight from a bank alert (normal transfer or P2P), no request needed. */
+export async function creditFromBankAlert(fd: FormData): Promise<void> {
+  const staff = await requireAdmin();
+  if (!staff) return;
+  const amountNaira = Number(fd.get("amount"));
+  if (!Number.isFinite(amountNaira) || amountNaira <= 0) back("e=bad_amount");
+  const { error } = await supabaseAdmin().rpc("credit_bank_transfer_direct", {
+    p_admin: staff.id, p_username: String(fd.get("username") ?? "").trim().replace(/^@/, ""), p_amount: Math.round(amountNaira * 100),
+    p_bank_ref: String(fd.get("reference") ?? ""), p_note: String(fd.get("note") ?? "").slice(0, 200),
+  });
+  if (error) {
+    const known = ["user_not_found", "ambiguous_user", "banned", "bad_reference", "bad_amount", "duplicate_reference", "not_open"].find((k) => error.message.includes(k));
+    if (!known) console.error("[bank] direct credit failed", error.message);
+    back(`e=${known ?? "failed"}`);
+  }
+  back("ok=credited");
+}
