@@ -8,6 +8,8 @@ import { AdSlot } from "@/components/ads/AdSlot";
 import { ReactionBar } from "@/components/feed/ReactionBar";
 import { CommentSection, type CommentRow } from "@/components/feed/CommentSection";
 import type { Engagement } from "@/app/(public)/engage-actions";
+import { TipButton } from "@/components/feed/TipButton";
+import { loadTipLimits } from "@/app/(public)/tip-actions";
 
 export default async function PostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -35,10 +37,12 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
   if (!isAuthor) await admin.rpc("record_post_view", { p_post: id, p_viewer: user.id }); // one paid view per user, post and day
 
   // Signed media URLs and comments are produced only here, after the access check has passed.
-  const [media, { data: eng }, { data: comments }] = await Promise.all([
+  const [media, { data: eng }, { data: comments }, tip, { data: bal }] = await Promise.all([
     signedMediaForPost(id),
     admin.rpc("post_engagement", { p_post: id, p_user: user.id }),
     admin.from("comments").select("id,body,created_at,profiles!comments_user_id_fkey(username)").eq("post_id", id).eq("status", "approved").order("created_at").limit(100),
+    loadTipLimits(),
+    supabase.rpc("my_wallet_balance"),
   ]);
 
   return (
@@ -49,7 +53,8 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
       </div>
       {own?.body && <div className="mt-6 whitespace-pre-wrap leading-relaxed text-neutral-200">{own.body}</div>}
       <MediaGallery items={media} />
-      <ReactionBar postId={id} initial={(eng ?? { like: 0, love: 0, fire: 0, mine: null, comments: 0 }) as Engagement} loggedIn />
+      <ReactionBar postId={id} initial={(eng ?? { like: 0, love: 0, fire: 0, mine: null, comments: 0 }) as Engagement} loggedIn
+        extra={tip.enabled && !isAuthor ? <TipButton postId={id} balanceKobo={Number(bal ?? 0)} minKobo={tip.minKobo} maxKobo={tip.maxKobo} feePct={tip.feePct} /> : null} />
       <CommentSection postId={id} comments={(comments ?? []) as unknown as CommentRow[]} loggedIn />
       <AdSlot slot="post_bottom" className="mt-8" />
     </main>

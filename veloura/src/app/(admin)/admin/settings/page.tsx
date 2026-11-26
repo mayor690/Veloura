@@ -65,6 +65,18 @@ export default async function Settings({ searchParams }: { searchParams: Promise
         <Field label="Points per approved comment" name="weight_comment" value={val("weight_comment", 3)} step="1" />
       </section>
 
+      <section className="grid gap-4 rounded-2xl border border-line bg-card p-5 sm:grid-cols-2">
+        <h2 className="font-semibold sm:col-span-2">Tips</h2>
+        <label className="flex items-start gap-2 text-sm sm:col-span-2">
+          <input type="checkbox" name="tips_enabled" defaultChecked={flag("tips_enabled", true)} className="mt-0.5" />
+          <span>Let readers tip authors from their wallet</span>
+        </label>
+        <Field label="Platform fee on tips (%)" name="tip_fee_pct" value={val("tip_fee_pct", 10)} hint="Kept by the platform. The author receives the rest. Tips never feed the daily creator pool." />
+        <Field label="Minimum tip (₦)" name="tip_min_naira" value={val("tip_min_kobo", 10000) / 100} />
+        <Field label="Maximum tip (₦)" name="tip_max_naira" value={val("tip_max_kobo", 5000000) / 100} />
+        <Field label="Daily cap per reader (₦)" name="tip_daily_cap_naira" value={val("tip_daily_cap_kobo", 10000000) / 100} hint="Total a reader can tip in any rolling 24 hours." />
+      </section>
+
       <section className="grid gap-4 rounded-2xl border border-line bg-card p-5 text-sm">
         <h2 className="font-semibold">Comments</h2>
         <label className="flex items-start gap-2">

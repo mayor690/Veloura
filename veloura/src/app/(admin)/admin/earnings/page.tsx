@@ -16,6 +16,10 @@ export default async function Earnings({ searchParams }: { searchParams: Promise
   const { data } = await admin.from("earnings_runs").select("*").order("earn_date", { ascending: false }).limit(30);
   const runs = (data ?? []) as Run[];
   const picked = /^\d{4}-\d{2}-\d{2}$/.test(sp.date ?? "") ? sp.date! : runs[0]?.earn_date;
+  const since30 = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const { data: tipRows } = await admin.from("tips").select("gross_kobo,fee_kobo,net_kobo").gte("created_at", since30).limit(10000);
+  const tipT = ((tipRows ?? []) as { gross_kobo: number; fee_kobo: number; net_kobo: number }[])
+    .reduce((a, t) => ({ gross: a.gross + t.gross_kobo, fee: a.fee + t.fee_kobo, net: a.net + t.net_kobo, n: a.n + 1 }), { gross: 0, fee: 0, net: 0, n: 0 });
   const { data: lines } = picked
     ? await admin.from("earnings_ledger")
         .select("post_id,creator_id,views,reactions,comments,points,amount_kobo,posts(title),profiles!earnings_ledger_creator_id_fkey(username)")
@@ -29,6 +33,9 @@ export default async function Earnings({ searchParams }: { searchParams: Promise
         Every night at 00:30 Lagos time, the creator share of the previous day&apos;s unlock revenue is split across posts by points
         (premium view, reaction, approved comment; weights in Settings) and credited to the authors. If nobody earned points that day, the
         pool carries over to the next day. Authors&apos; own activity and banned users never count. See docs/EARNINGS.md.
+      </p>
+      <p className="rounded-xl border border-line bg-card p-4 text-sm text-muted">
+        Tips, last 30 days: {tipT.n} tip(s), {naira(tipT.gross)} sent by readers, {naira(tipT.net)} to authors, {naira(tipT.fee)} platform fee. Tips are separate from the nightly pool.
       </p>
       {sp.ran && <p className="rounded-xl bg-emerald-500/15 p-3 text-sm text-emerald-300">Done. {sp.ran} day(s) paid.</p>}
       {sp.e && <p className="rounded-xl bg-rose/15 p-3 text-sm text-rose">The run failed. Check the logs; it is safe to try again.</p>}

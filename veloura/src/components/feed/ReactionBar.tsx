@@ -10,7 +10,7 @@ const KINDS = [
   { kind: "fire", Icon: Flame, label: "Fire" },
 ] as const;
 
-export function ReactionBar({ postId, initial, loggedIn }: { postId: string; initial: Engagement; loggedIn: boolean }) {
+export function ReactionBar({ postId, initial, loggedIn, extra }: { postId: string; initial: Engagement; loggedIn: boolean; extra?: React.ReactNode }) {
   const [eng, setEng] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -41,6 +41,7 @@ export function ReactionBar({ postId, initial, loggedIn }: { postId: string; ini
             <Icon size={16} /> {eng[kind]}
           </button>
         ))}
+        {extra}
         <span className="ml-auto flex items-center gap-1.5 text-sm text-muted"><MessageCircle size={16} /> {eng.comments}</span>
       </div>
       {!loggedIn && <p className="mt-2 text-xs text-muted"><Link href="/login" className="text-purple underline">Log in</Link> to react.</p>}

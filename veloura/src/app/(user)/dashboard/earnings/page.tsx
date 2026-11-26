@@ -23,13 +23,16 @@ export default async function Earnings({ searchParams }: { searchParams: Promise
   const { e } = await searchParams;
   const supabase = await createClient();
   const admin = supabaseAdmin();
-  const [{ data: bal }, { data: pays }, { data: accts }, { data: min }, { data: earned }] = await Promise.all([
+  const [{ data: bal }, { data: pays }, { data: accts }, { data: min }, { data: earned }, { data: tipRows }] = await Promise.all([
     supabase.rpc("my_creator_balance"),
     supabase.from("payouts").select("id,amount_kobo,status,reference,note,created_at").order("created_at", { ascending: false }).limit(20),
     admin.from("payout_accounts").select("id,label,type").eq("user_id", v.id).eq("is_active", true),
     admin.from("site_settings").select("value").eq("key", "min_payout_kobo").maybeSingle(),
     admin.from("earnings_ledger").select("earn_date,views,reactions,comments,amount_kobo,posts(title)").eq("creator_id", v.id).order("earn_date", { ascending: false }).limit(60),
+    admin.from("tips").select("net_kobo,created_at,posts(title)").eq("creator_id", v.id).order("created_at", { ascending: false }).limit(15),
   ]);
+  type T = { net_kobo: number; created_at: string; posts: { title: string | null } | null };
+  const tips = (tipRows ?? []) as unknown as T[];
   type E = { earn_date: string; views: number; reactions: number; comments: number; amount_kobo: number; posts: { title: string | null } | null };
   const byDay = new Map<string, { total: number; lines: E[] }>();
   for (const e of (earned ?? []) as unknown as E[]) {
@@ -66,6 +69,20 @@ export default async function Earnings({ searchParams }: { searchParams: Promise
             </li>
           ))}
           {byDay.size === 0 && <li className="text-muted">Nothing yet. Earnings appear after the first full day with activity on your posts.</li>}
+        </ul>
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-line bg-card p-5">
+        <h2 className="font-semibold">Tips</h2>
+        <p className="mt-1 text-xs text-muted">Readers can tip you anonymously. Tips are added to your balance straight away, after the platform fee.</p>
+        <ul className="mt-3 grid gap-1.5 text-sm">
+          {tips.map((t, i) => (
+            <li key={i} className="flex justify-between gap-3">
+              <span className="truncate text-muted">{new Date(t.created_at).toLocaleDateString("en-NG")} · {t.posts?.title ?? "Untitled"}</span>
+              <span>{naira(t.net_kobo)}</span>
+            </li>
+          ))}
+          {tips.length === 0 && <li className="text-muted">No tips yet.</li>}
         </ul>
       </section>
 

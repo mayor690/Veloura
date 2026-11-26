@@ -67,6 +67,21 @@ Safety layers (run `supabase/migrations/0008_comment_safety.sql`):
   reviewed as before. Auto-approved comments are marked in the **Recently approved** list. Turn the switch off and every
   comment is reviewed again immediately. The daily comment limits still apply.
 
+## Tips
+
+Readers can tip an author from their wallet (`supabase/migrations/0012_tips.sql`). Tips are anonymous: the author sees the
+amount and the post, never who sent it.
+
+- The reader is debited the full amount. The author is credited the amount minus the platform fee, straight away, into the
+  same creator balance that nightly earnings use, and is paid out through the same payout request.
+- Tips are **not** unlock revenue, so they never enter the nightly pool.
+- Only a reader who currently has access to the post's category can tip it. Nobody can tip their own post, and banned or
+  hidden or removed posts cannot be tipped.
+- **Admin, Settings, Tips** controls: on/off, platform fee (default 10%), minimum (₦100), maximum (₦50,000) and a daily cap
+  per reader over any rolling 24 hours (₦100,000). Changes apply to new tips only.
+- Tips are final. To undo one, use **Admin, Users, Adjust a balance** with a note.
+- Authors see their tips under **Dashboard, Earnings**; admins see 30-day tip totals on **Admin, Earnings**.
+
 ## Operating it
 
 - **Admin, Earnings** shows every run (revenue, pool, paid out, carried, points) with a per-post breakdown, and a
