@@ -6,7 +6,7 @@ import { createPost } from "@/app/(user)/dashboard/create/actions";
 
 type Category = { id: string; name: string };
 
-export function PostComposer({ categories }: { categories: Category[] }) {
+export function PostComposer({ categories, mediaEnabled = true }: { categories: Category[]; mediaEnabled?: boolean }) {
   const router = useRouter();
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [title, setTitle] = useState("");
@@ -48,7 +48,11 @@ export function PostComposer({ categories }: { categories: Category[] }) {
         <textarea value={body} maxLength={5000} rows={7} onChange={(e) => setBody(e.target.value)} className={`py-3 ${field}`} />
       </label>
 
-      <MediaUploader onChange={onMedia} />
+      {mediaEnabled ? (
+        <MediaUploader onChange={onMedia} />
+      ) : (
+        <p className="rounded-xl border border-line bg-card p-3 text-sm text-muted">Photo and video uploads are unavailable right now. You can still submit a text post.</p>
+      )}
 
       <label className="grid gap-1.5 text-sm">
         <span className="text-muted">Short summary for the feed, shown only to people who have unlocked the category (optional)</span>

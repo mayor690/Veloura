@@ -18,11 +18,7 @@ export default async function Create() {
       <h1 className="mt-3 font-display text-3xl">New post</h1>
       <p className="mt-1 text-sm text-muted">Anonymous. Reviewed before it goes live.</p>
       <div className="mt-6">
-        {r2Configured() ? (
-          <PostComposer categories={categories} />
-        ) : (
-          <div className="rounded-2xl border border-line bg-card p-5 text-sm text-muted">Posting is unavailable right now. Please check back soon.</div>
-        )}
+        <PostComposer categories={categories} mediaEnabled={r2Configured()} />
       </div>
     </main>
   );
