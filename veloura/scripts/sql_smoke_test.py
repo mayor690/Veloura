@@ -255,6 +255,19 @@ cur.execute("reset role")
 check("browser cannot read comment reports", (cur.execute("set role authenticated"), one("select count(*) from comment_reports"))[1] == 0)
 cur.execute("reset role")
 
+# ---- migration 0009: only a user's first approved comment per post earns ----
+cur.execute("reset role")
+D1, D2 = "date '2020-01-10'", "date '2020-01-11'"
+at = lambda d: f"(({d} + time '12:00') at time zone 'Africa/Lagos')"
+for who, body, st, d in [(V2, "first by v2", "approved", D1), (V2, "second by v2", "approved", D2), (V2, "third by v2", "approved", D1),
+                         (V3, "first by v3", "approved", D1),
+                         (V1, "first by v1", "removed", D1), (V1, "second by v1", "approved", D2)]:
+    cur.execute(f"insert into comments (post_id, user_id, body, status, approved_at) values (%s,%s,%s,%s,{at(d)})", (p4, who, body, st))
+pts = lambda d: one(f"select comments from earn_points({d},1,2,3) where post_id=%s", (p4,))
+check("earnings: two accounts count once each on the day of their first approval", pts(D1) == 2)
+check("earnings: a later comment on another day by the same account earns nothing", pts(D2) == 0)
+check("earnings: the public comment count still counts every approved comment", one("select post_engagement(%s,%s)", (p4, C))["comments"] >= 4)
+
 print(f"\n{passed} checks passed, {len(failures)} failed")
 for f in failures: print("  FAIL:", f)
 sys.exit(1 if failures else 0)

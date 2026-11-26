@@ -10,7 +10,8 @@ the **previous Lagos day**:
 3. **Points** for each live post that day:
    - 1 point per **view** (every view is a paid view; one per user per post per day),
    - 2 points per **reaction** (one reaction per user per post),
-   - 3 points per **approved comment** (counted on the day it was approved).
+   - 3 points per **commenter**: only an account's first approved comment on a post counts, on the day it was approved.
+     Further comments by the same account on that post still appear, but earn nothing on any day.
 4. Each post receives `pool × its points ÷ total points`. Amounts are rounded with the largest-remainder method so they add up to
    the pool **exactly, to the kobo**.
 5. Each author is credited once for the day in their creator balance (`creator_ledger`), visible on **Dashboard, Earnings**
@@ -31,7 +32,7 @@ A ≈ ₦159.71, B ≈ ₦22.82, C ≈ ₦68.45 (the sum is exactly ₦250.98).
 - An author's **own** views, reactions and comments on their posts.
 - Anything by a **banned** user, and anything on posts by a banned author.
 - Posts that are not live: pending, rejected, removed, or hidden while a report is reviewed.
-- Pending or rejected comments.
+- Pending or rejected comments, and any second or later comment by the same account on the same post.
 
 Only people who have **unlocked the category** can react or comment on a premium post (checked in the database).
 
