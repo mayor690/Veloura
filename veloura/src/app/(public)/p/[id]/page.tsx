@@ -38,7 +38,7 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
   const [media, { data: eng }, { data: comments }] = await Promise.all([
     signedMediaForPost(id),
     admin.rpc("post_engagement", { p_post: id, p_user: user.id }),
-    admin.from("comments").select("id,body,created_at,profiles(username)").eq("post_id", id).eq("status", "approved").order("created_at").limit(100),
+    admin.from("comments").select("id,body,created_at,profiles!comments_user_id_fkey(username)").eq("post_id", id).eq("status", "approved").order("created_at").limit(100),
   ]);
 
   return (

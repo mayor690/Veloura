@@ -96,7 +96,10 @@ export async function approveComment(fd: FormData): Promise<void> {
   const now = new Date().toISOString();
   const { data } = await supabaseAdmin().from("comments")
     .update({ status: "approved", approved_at: now, moderated_by: staff.id }).eq("id", id).eq("status", "pending").select("id");
-  if (data?.length) await audit(staff.id, "comment.approve", "comment", id);
+  if (data?.length) {
+    await supabaseAdmin().rpc("close_comment_reports", { p_comment: id, p_status: "dismissed" });
+    await audit(staff.id, "comment.approve", "comment", id);
+  }
   done();
 }
 
@@ -106,7 +109,10 @@ export async function rejectComment(fd: FormData): Promise<void> {
   const id = String(fd.get("id") ?? "");
   const { data } = await supabaseAdmin().from("comments")
     .update({ status: "rejected", moderated_by: staff.id }).eq("id", id).eq("status", "pending").select("id");
-  if (data?.length) await audit(staff.id, "comment.reject", "comment", id);
+  if (data?.length) {
+    await supabaseAdmin().rpc("close_comment_reports", { p_comment: id, p_status: "actioned" });
+    await audit(staff.id, "comment.reject", "comment", id);
+  }
   done();
 }
 
@@ -116,6 +122,19 @@ export async function removeComment(fd: FormData): Promise<void> {
   const id = String(fd.get("id") ?? "");
   const { data } = await supabaseAdmin().from("comments")
     .update({ status: "removed", moderated_by: staff.id }).eq("id", id).eq("status", "approved").select("id");
-  if (data?.length) await audit(staff.id, "comment.remove", "comment", id);
+  if (data?.length) {
+    await supabaseAdmin().rpc("close_comment_reports", { p_comment: id, p_status: "actioned" });
+    await audit(staff.id, "comment.remove", "comment", id);
+  }
+  done();
+}
+
+/** Reports on a live comment were not upheld: close them and leave the comment up. */
+export async function dismissCommentReports(fd: FormData): Promise<void> {
+  const staff = await requireStaff();
+  if (!staff) return;
+  const id = String(fd.get("id") ?? "");
+  const { data } = await supabaseAdmin().rpc("close_comment_reports", { p_comment: id, p_status: "dismissed" });
+  if (Number(data) > 0) await audit(staff.id, "comment.reports_dismiss", "comment", id);
   done();
 }

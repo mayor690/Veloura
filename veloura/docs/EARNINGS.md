@@ -45,9 +45,21 @@ only ever interact with one creator, and ban them.
 ## Comments are always reviewed first
 
 Comments start as **pending** and only appear after a moderator approves them (**Admin, Moderation, Comments**). Approved
-comments can be removed later. This is deliberate for an adult platform. If the queue becomes too big, the options are
-more moderators, trusted-commenter auto-approval, or a keyword pre-filter; each needs care, so they are not built in.
-Comments cannot be reported by readers yet; staff remove them from the Comments tab.
+comments can be removed later. This is deliberate for an adult platform.
+
+Safety layers (run `supabase/migrations/0008_comment_safety.sql`):
+
+- **Pre-filter (before anything is saved).** Comments containing links, emails, phone numbers, social handles or contact
+  phrases ("dm me", "whatsapp") are refused with a message and never stored. Comments that mention ages under 18 or
+  minor-related words are still saved as pending but **flagged**, and show first in the review queue. The word lists live in
+  `src/lib/comment-filter.ts` and are covered by unit tests. The filter never approves anything.
+- **Reader reports.** Readers who can see a comment have a **Report** link on it (one report per reader per comment, 20 a day).
+  Serious reasons (possible minor, no consent, illegal) pull the comment off the page at once and back into the review
+  queue flagged. Other reasons leave it live and list it under **Reported by readers**, where staff can remove it or dismiss
+  the reports.
+- **Visibility.** The admin nav shows a count next to **Moderation**, and the overview has a **Comments to review** card.
+
+Still not built, on purpose: auto-approval for trusted commenters. Add it only after the queue, reporting and rules are working.
 
 ## Operating it
 

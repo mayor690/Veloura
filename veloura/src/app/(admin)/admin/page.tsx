@@ -7,6 +7,7 @@ import { r2Configured } from "@/lib/r2/client";
 import { naira, ago } from "@/lib/constants";
 import { usd } from "@/lib/payments/fx";
 import { BarChart, Stat } from "@/components/admin/ui";
+import { commentQueueCounts } from "@/lib/admin/queues";
 
 type Overview = Record<string, number | string | null>;
 type Day = { day: string; signups: number; topup_kobo: number; spend_kobo: number; views: number; unlocks: number };
@@ -14,11 +15,12 @@ type Day = { day: string; signups: number; topup_kobo: number; spend_kobo: numbe
 export default async function AdminHome() {
   const staff = await requireStaff();
   const admin = supabaseAdmin();
-  const [{ data: ov }, { data: days }, { data: top }, fx] = await Promise.all([
+  const [{ data: ov }, { data: days }, { data: top }, fx, comments] = await Promise.all([
     admin.rpc("admin_overview"),
     admin.rpc("admin_daily_stats", { p_days: 14 }),
     admin.from("posts").select("id,title,view_count,categories(name)").eq("status", "approved").order("view_count", { ascending: false }).limit(5),
     loadFx(),
+    commentQueueCounts(),
   ]);
   const o = (ov ?? {}) as Overview;
   const n = (k: string) => Number(o[k] ?? 0);
@@ -42,11 +44,13 @@ export default async function AdminHome() {
         </ul>
       )}
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Link href="/admin/moderation?tab=urgent"><Stat label="Urgent reports" value={n("reports_urgent")} tone={n("reports_urgent") ? "danger" : "default"}
           sub={o.oldest_urgent_at ? `oldest ${ago(String(o.oldest_urgent_at))}` : "none waiting"} /></Link>
         <Link href="/admin/moderation?tab=reports"><Stat label="Other reports" value={n("reports_open")} tone={n("reports_open") ? "warn" : "default"} /></Link>
         <Link href="/admin/moderation?tab=posts"><Stat label="New posts to review" value={n("posts_pending")} tone={n("posts_pending") ? "warn" : "default"} /></Link>
+        <Link href="/admin/moderation?tab=comments"><Stat label="Comments to review" value={comments.total} tone={comments.total ? "warn" : "default"}
+          sub={`${comments.pending} waiting, ${comments.reported} reported`} /></Link>
       </section>
 
       {isAdmin && (

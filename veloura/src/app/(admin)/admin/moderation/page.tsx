@@ -7,6 +7,7 @@ import { Badge, inputCls, btn } from "@/components/admin/ui";
 import { ago } from "@/lib/constants";
 import { approvePost, dismissReports, rejectPost, takedownPost } from "./actions";
 import { CommentsQueue } from "./CommentsQueue";
+import { commentQueueCounts } from "@/lib/admin/queues";
 
 const REASON_LABEL: Record<string, string> = {
   possible_minor: "Possible minor", non_consensual: "Non-consensual / intimate content", illegal: "Illegal content",
@@ -44,11 +45,12 @@ export default async function Moderation({ searchParams }: { searchParams: Promi
   const staff = (await requireStaff())!;
   const sp = await searchParams;
   const admin = supabaseAdmin();
-  const [urgentN, reportsN, { count: pendingN }, { count: commentsN }] = await Promise.all([
+  const [urgentN, reportsN, { count: pendingN }, commentCounts] = await Promise.all([
     countGroups(true), countGroups(false),
     admin.from("posts").select("id", { count: "exact", head: true }).eq("status", "pending"),
-    admin.from("comments").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    commentQueueCounts(),
   ]);
+  const commentsN = commentCounts.total;
   const tab = ["urgent", "reports", "posts", "comments", "live"].includes(sp.tab ?? "") ? sp.tab! : urgentN ? "urgent" : reportsN ? "reports" : pendingN ? "posts" : commentsN ? "comments" : "posts";
 
   const tabs = [

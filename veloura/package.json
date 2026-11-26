@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/lib/payments/payments.test.ts src/lib/media/media.test.ts src/lib/crypto-box.test.ts",
+    "test": "tsx --test src/lib/payments/payments.test.ts src/lib/media/media.test.ts src/lib/crypto-box.test.ts src/lib/comment-filter.test.ts",
     "test:sql": "python3 scripts/sql_smoke_test.py"
   },
   "dependencies": {

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CommentForm } from "./CommentForm";
+import { CommentReportButton } from "./CommentReportButton";
 
 export type CommentRow = { id: string; body: string; created_at: string; profiles: { username: string } | null };
 
@@ -12,6 +13,7 @@ export function CommentSection({ postId, comments, loggedIn }: { postId: string;
           <li key={c.id} className="rounded-xl border border-line bg-card p-3 text-sm">
             <p className="text-xs text-muted">@{c.profiles?.username ?? "anon"} · {new Date(c.created_at).toLocaleDateString("en-NG")}</p>
             <p className="mt-1 whitespace-pre-wrap">{c.body}</p>
+            {loggedIn && <CommentReportButton commentId={c.id} />}
           </li>
         ))}
         {comments.length === 0 && <li className="text-sm text-muted">No comments yet.</li>}
