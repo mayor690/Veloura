@@ -299,6 +299,21 @@ check("trusted: trust returns when reports are closed", one("select create_comme
 setting("comment_auto_approve", "false")
 check("trusted: switching it off stops auto-approval at once", one("select create_comment(%s,%s,'hello eight')", (C, p4)) == "pending")
 
+# ---- migration 0011: temporary mute ----
+cur.execute("reset role")
+age()
+cur.execute("update comments set status='rejected' where user_id=%s and status='pending'", (C,))
+cur.execute("update profiles set muted_until = now() + interval '7 days' where id=%s", (C,))
+check("mute: a restricted account cannot comment", raises("select create_comment(%s,%s,'muted words')", (C, p4), "muted"))
+check("mute: a restricted account cannot react", raises("select set_reaction(%s,%s,'like')", (C, p4), "muted"))
+check("mute: taking a reaction back is still allowed", one("select set_reaction(%s,%s,null)", (C, p4)) is not None)
+cur.execute("update profiles set muted_until = 'infinity' where id=%s", (C,))
+check("mute: 'until lifted' blocks too", raises("select create_comment(%s,%s,'muted words')", (C, p4), "muted"))
+cur.execute("update profiles set muted_until = now() - interval '1 minute' where id=%s", (C,))
+check("mute: an expired restriction no longer blocks", one("select create_comment(%s,%s,'free again')", (C, p4)) in ("pending", "approved")); age()
+cur.execute("update profiles set muted_until = null, mute_reason = null where id=%s", (C,))
+check("mute: lifting it restores commenting", one("select create_comment(%s,%s,'free again too')", (C, p4)) in ("pending", "approved"))
+
 print(f"\n{passed} checks passed, {len(failures)} failed")
 for f in failures: print("  FAIL:", f)
 sys.exit(1 if failures else 0)

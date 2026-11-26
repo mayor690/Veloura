@@ -18,11 +18,19 @@ const ERR: Record<string, string> = {
 };
 const msg = (m: string) => Object.entries(ERR).find(([k]) => m.includes(k))?.[1] ?? "Something went wrong. Try again.";
 
+/** Friendly text for a restricted account, including when the restriction ends. */
+async function mutedMessage(userId: string): Promise<string> {
+  const { data } = await supabaseAdmin().from("profiles").select("muted_until").eq("id", userId).maybeSingle();
+  const until = data?.muted_until ? new Date(data.muted_until) : null;
+  if (!until || until.getFullYear() > 9000) return "You can't comment or react right now. This restriction stays until our team lifts it.";
+  return `You can't comment or react until ${until.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}. You can still read and post.`;
+}
+
 export async function setReaction(postId: string, kind: string | null): Promise<{ ok: true; engagement: Engagement } | { error: string }> {
   const { data: { user } } = await createClient().then((s) => s.auth.getUser());
   if (!user) return { error: "Log in to react." };
   const { data, error } = await supabaseAdmin().rpc("set_reaction", { p_user: user.id, p_post: postId, p_kind: kind });
-  if (error) return { error: msg(error.message) };
+  if (error) return { error: error.message.includes("muted") ? await mutedMessage(user.id) : msg(error.message) };
   return { ok: true, engagement: data as Engagement };
 }
 
@@ -35,7 +43,7 @@ export async function addComment(postId: string, body: string): Promise<{ ok: tr
   const { data, error } = await supabaseAdmin().rpc("create_comment", {
     p_user: user.id, p_post: postId, p_body: text, p_flag: check.action === "flag" ? check.flag : null,
   });
-  if (error) return { error: msg(error.message) };
+  if (error) return { error: error.message.includes("muted") ? await mutedMessage(user.id) : msg(error.message) };
   return { ok: true, live: data === "approved" };
 }
 

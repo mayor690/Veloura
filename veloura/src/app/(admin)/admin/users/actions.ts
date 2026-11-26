@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { audit } from "@/lib/admin/audit";
+import { muteUser as applyMute, unmuteUser as liftMute } from "@/lib/admin/mute";
 
 const done = () => revalidatePath("/admin/users");
 
@@ -55,5 +56,19 @@ export async function adjustBalance(fd: FormData): Promise<void> {
     p_delta: Math.round(naira * 100), p_note: String(fd.get("note") ?? "").slice(0, 300),
   });
   if (error) console.error("[admin] adjust failed", error.message);
+  done();
+}
+
+export async function muteUser(fd: FormData): Promise<void> {
+  const staff = await requireAdmin();
+  if (!staff) return;
+  await applyMute(staff.id, String(fd.get("userId") ?? ""), String(fd.get("duration") ?? ""), String(fd.get("reason") ?? ""), "users");
+  done();
+}
+
+export async function unmuteUser(fd: FormData): Promise<void> {
+  const staff = await requireAdmin();
+  if (!staff) return;
+  await liftMute(staff.id, String(fd.get("userId") ?? ""));
   done();
 }

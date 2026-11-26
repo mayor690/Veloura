@@ -19,7 +19,7 @@ auth only. See docs/ARCHITECTURE.md.
 
 ## Setup
 
-1. Create a Supabase project. Run the migrations in order (`supabase/migrations/0001` to `0010`) in the SQL
+1. Create a Supabase project. Run the migrations in order (`supabase/migrations/0001` to `0011`) in the SQL
    editor, or `npx supabase link` + `npx supabase db push`.
 2. `cp .env.example .env.local` and fill it in (Supabase keys, `RECOVERY_PEPPER`, site URL).
 3. Crypto: follow **docs/NOWPAYMENTS_SETUP.md** (account, API key, IPN secret, exchange rate, testing).

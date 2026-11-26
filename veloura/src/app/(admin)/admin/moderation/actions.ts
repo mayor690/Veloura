@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { r2Configured } from "@/lib/r2/client";
 import { deleteObject } from "@/lib/r2/storage";
 import { audit } from "@/lib/admin/audit";
+import { muteUser } from "@/lib/admin/mute";
 
 const done = () => revalidatePath("/admin/moderation");
 
@@ -136,5 +137,22 @@ export async function dismissCommentReports(fd: FormData): Promise<void> {
   const id = String(fd.get("id") ?? "");
   const { data } = await supabaseAdmin().rpc("close_comment_reports", { p_comment: id, p_status: "dismissed" });
   if (Number(data) > 0) await audit(staff.id, "comment.reports_dismiss", "comment", id);
+  done();
+}
+
+/** Reject a pending comment and restrict its author from commenting and reacting for 7 days. */
+export async function rejectAndMuteComment(fd: FormData): Promise<void> {
+  const staff = await requireStaff();
+  if (!staff) return;
+  const id = String(fd.get("id") ?? "");
+  const admin = supabaseAdmin();
+  const { data } = await admin.from("comments")
+    .update({ status: "rejected", moderated_by: staff.id }).eq("id", id).eq("status", "pending").select("id,user_id");
+  const row = (data ?? [])[0] as { id: string; user_id: string } | undefined;
+  if (row) {
+    await admin.rpc("close_comment_reports", { p_comment: id, p_status: "actioned" });
+    await audit(staff.id, "comment.reject", "comment", id, { muted: true });
+    await muteUser(staff.id, row.user_id, "168", "Comment broke the community rules", "moderation");
+  }
   done();
 }

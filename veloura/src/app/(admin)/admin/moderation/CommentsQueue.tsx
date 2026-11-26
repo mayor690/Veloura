@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { Badge, btn } from "@/components/admin/ui";
 import { ago } from "@/lib/constants";
-import { approveComment, dismissCommentReports, rejectComment, removeComment } from "./actions";
+import { approveComment, dismissCommentReports, rejectAndMuteComment, rejectComment, removeComment } from "./actions";
 
 // comments has two foreign keys to profiles (author and moderator), so the embed must name the author one.
 const AUTHOR = "profiles!comments_user_id_fkey(username)";
@@ -87,6 +87,7 @@ export async function CommentsQueue() {
           {pending.map((c) => row(c, c.created_at, c.flag, <>
             <form action={approveComment}><input type="hidden" name="id" value={c.id} /><button className={`${btn} bg-emerald-600`}>Approve</button></form>
             <form action={rejectComment}><input type="hidden" name="id" value={c.id} /><button className={`${btn} border border-rose text-rose`}>Reject</button></form>
+            <form action={rejectAndMuteComment}><input type="hidden" name="id" value={c.id} /><button className={`${btn} border border-amber-400 text-amber-300`}>Reject and restrict 7 days</button></form>
           </>))}
           {!pending.length && <li className="text-muted">No comments waiting.</li>}
         </ul>

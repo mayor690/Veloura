@@ -17,6 +17,16 @@ Run `supabase/migrations/0005_admin_safety.sql` first. Make your first admin in 
 
 Every admin action re-checks the role on the server (the layout alone is not trusted) and writes to `audit_logs`.
 
+## Restricting an account (mute) and banning
+
+- **Restrict commenting and reactions** (Admin, Users; admins only): pick 1 day, 7 days, 30 days or until lifted, with an
+  optional reason. The account can still read, post and report, but cannot comment or react until the restriction ends.
+  Taking back a reaction is still allowed. The user sees a message with the end date. Lift it any time with **Lift comment
+  restriction**. Staff accounts and banned accounts cannot be restricted.
+- **Reject and restrict 7 days** (Moderation, Comments; moderators and admins) rejects a pending comment and restricts its author in one click.
+- **Ban** is separate and stays permanent until an admin lifts it. Every restriction and ban is written to the audit log.
+- Needs `supabase/migrations/0011_mute_restriction.sql`.
+
 ## Reports and the urgent queue
 
 - Every post card and post page has a **Report** button (logged-in users; anonymous to the poster). One report per
