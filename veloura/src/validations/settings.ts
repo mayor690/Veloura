@@ -14,6 +14,7 @@ export const settingsSchema = z
     weight_view: z.coerce.number().int().min(0).max(20),
     weight_reaction: z.coerce.number().int().min(0).max(20),
     weight_comment: z.coerce.number().int().min(0).max(20),
+    comment_trust_min_approved: z.coerce.number().int().min(1).max(100),
   })
   .refine((v) => v.max_topup_usd > v.min_topup_usd, { message: "Maximum top-up must be above the minimum", path: ["max_topup_usd"] })
   .refine((v) => v.full_pass_naira >= v.daily_price_naira, { message: "Full Pass should cost at least one category", path: ["full_pass_naira"] });

@@ -1,15 +1,21 @@
 "use client";
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { addComment } from "@/app/(public)/engage-actions";
 
 export function CommentForm({ postId }: { postId: string }) {
+  const router = useRouter();
   const [body, setBody] = useState("");
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
   const submit = () =>
     start(async () => {
       const r = await addComment(postId, body);
-      if ("ok" in r) { setBody(""); setNote({ ok: true, text: "Thanks! Your comment will appear once it has been reviewed." }); }
+      if ("ok" in r) {
+        setBody("");
+        setNote({ ok: true, text: r.live ? "Your comment is live." : "Thanks! Your comment will appear once it has been reviewed." });
+        if (r.live) router.refresh();
+      }
       else setNote({ ok: false, text: r.error });
     });
   return (

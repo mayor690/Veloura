@@ -60,7 +60,12 @@ Safety layers (run `supabase/migrations/0008_comment_safety.sql`):
   the reports.
 - **Visibility.** The admin nav shows a count next to **Moderation**, and the overview has a **Comments to review** card.
 
-Still not built, on purpose: auto-approval for trusted commenters. Add it only after the queue, reporting and rules are working.
+- **Trusted accounts (optional, off by default).** In **Admin, Settings, Comments**, an admin can let established accounts
+  comment without review (`supabase/migrations/0010_trusted_commenters.sql`). A comment goes live at once only when the
+  switch is on, the pre-filter did not flag it, the account has at least the set number of approved comments (default 5),
+  none of its comments was rejected or removed in the last 90 days, and none has an open reader report. Everything else is
+  reviewed as before. Auto-approved comments are marked in the **Recently approved** list. Turn the switch off and every
+  comment is reviewed again immediately. The daily comment limits still apply.
 
 ## Operating it
 

@@ -6,7 +6,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { audit } from "@/lib/admin/audit";
 import { settingsSchema } from "@/validations/settings";
 
-const BOOLS = ["ads_enabled", "crypto_enabled", "signups_enabled", "maintenance_mode"] as const;
+const BOOLS = ["ads_enabled", "crypto_enabled", "signups_enabled", "maintenance_mode", "comment_auto_approve"] as const;
 
 export async function saveSettings(fd: FormData): Promise<void> {
   const staff = await requireAdmin();
@@ -39,6 +39,7 @@ export async function saveSettings(fd: FormData): Promise<void> {
     weight_view: v.weight_view,
     weight_reaction: v.weight_reaction,
     weight_comment: v.weight_comment,
+    comment_trust_min_approved: v.comment_trust_min_approved,
   };
   for (const b of BOOLS) next[b] = fd.get(b) === "on";
 

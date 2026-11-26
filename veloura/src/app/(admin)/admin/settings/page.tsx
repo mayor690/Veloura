@@ -65,6 +65,16 @@ export default async function Settings({ searchParams }: { searchParams: Promise
         <Field label="Points per approved comment" name="weight_comment" value={val("weight_comment", 3)} step="1" />
       </section>
 
+      <section className="grid gap-4 rounded-2xl border border-line bg-card p-5 text-sm">
+        <h2 className="font-semibold">Comments</h2>
+        <label className="flex items-start gap-2">
+          <input type="checkbox" name="comment_auto_approve" defaultChecked={flag("comment_auto_approve", false)} className="mt-0.5" />
+          <span>Let trusted accounts comment without review</span>
+        </label>
+        <Field label="Approved comments needed to be trusted" name="comment_trust_min_approved" value={val("comment_trust_min_approved", 5)} step="1"
+          hint="Off by default. When on, an account's comment goes live at once only if it reaches this many approved comments, none were rejected or removed in the last 90 days, none has an open report, and the filter did not flag it. Every other comment is still reviewed." />
+      </section>
+
       <section className="grid gap-3 rounded-2xl border border-line bg-card p-5 text-sm">
         <h2 className="font-semibold">Switches</h2>
         {[

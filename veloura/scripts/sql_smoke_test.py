@@ -268,6 +268,37 @@ check("earnings: two accounts count once each on the day of their first approval
 check("earnings: a later comment on another day by the same account earns nothing", pts(D2) == 0)
 check("earnings: the public comment count still counts every approved comment", one("select post_engagement(%s,%s)", (p4, C))["comments"] >= 4)
 
+# ---- migration 0010: trusted commenters ----
+cur.execute("reset role")
+def age():  # step past the daily comment limits
+    cur.execute("update comments set created_at = created_at - interval '3 days' where user_id=%s and created_at > now() - interval '1 day'", (C,))
+def setting(k, v): cur.execute("update site_settings set value = %s::jsonb where key=%s", (v, k))
+cur.execute("update comments set status='rejected' where user_id=%s and status='pending'", (C,))   # start clean
+cur.execute("update comments set moderated_at = now() - interval '200 days' where user_id=%s", (C,))
+age()
+check("trusted: setting exists and is off by default", one("select value from site_settings where key='comment_auto_approve'") is False)
+check("trusted: switch off means pending", one("select create_comment(%s,%s,'hello one')", (C, p4)) == "pending"); age()
+setting("comment_auto_approve", "true"); setting("comment_trust_min_approved", "2")
+check("trusted: switch on but no approved history means pending", one("select create_comment(%s,%s,'hello two')", (C, p4)) == "pending"); age()
+cur.execute("update comments set status='approved', approved_at=now() where user_id=%s and body in ('hello one','hello two')", (C,))
+check("trusted: enough approved comments means live at once", one("select create_comment(%s,%s,'hello three')", (C, p4)) == "approved"); age()
+check("trusted: auto-approved comments are marked and have an approval time",
+      q("select auto_approved, approved_at is not null from comments where user_id=%s and body='hello three'", (C,))[0] == (True, True))
+check("trusted: a filter flag still waits for review", one("select create_comment(%s,%s,'hello flagged','minor_terms')", (C, p4)) == "pending"); age()
+cur.execute("update comments set status='rejected' where user_id=%s and body='hello flagged'", (C,))
+check("trusted: a rejection sets the moderation time", one("select moderated_at is not null from comments where user_id=%s and body='hello flagged'", (C,)) is True)
+check("trusted: a recent rejection sends the account back to review", one("select create_comment(%s,%s,'hello four')", (C, p4)) == "pending"); age()
+cur.execute("update comments set moderated_at = now() - interval '100 days' where user_id=%s and status='rejected'", (C,))
+check("trusted: after 90 days the account is trusted again", one("select create_comment(%s,%s,'hello five')", (C, p4)) == "approved"); age()
+cm3 = one("select id from comments where user_id=%s and body='hello three'", (C,))
+cur.execute("insert into comment_reports (comment_id, reporter_id, reason) values (%s,%s,'spam')", (cm3, V3))
+check("trusted: an open report on the account's comments means review", one("select create_comment(%s,%s,'hello six')", (C, p4)) == "pending"); age()
+cur.execute("update comment_reports set status='dismissed' where comment_id=%s", (cm3,))
+cur.execute("update comments set status='approved', approved_at=now() where user_id=%s and body='hello six'", (C,))
+check("trusted: trust returns when reports are closed", one("select create_comment(%s,%s,'hello seven')", (C, p4)) == "approved"); age()
+setting("comment_auto_approve", "false")
+check("trusted: switching it off stops auto-approval at once", one("select create_comment(%s,%s,'hello eight')", (C, p4)) == "pending")
+
 print(f"\n{passed} checks passed, {len(failures)} failed")
 for f in failures: print("  FAIL:", f)
 sys.exit(1 if failures else 0)

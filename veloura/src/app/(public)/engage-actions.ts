@@ -26,17 +26,17 @@ export async function setReaction(postId: string, kind: string | null): Promise<
   return { ok: true, engagement: data as Engagement };
 }
 
-export async function addComment(postId: string, body: string): Promise<{ ok: true } | { error: string }> {
+export async function addComment(postId: string, body: string): Promise<{ ok: true; live: boolean } | { error: string }> {
   const { data: { user } } = await createClient().then((s) => s.auth.getUser());
   if (!user) return { error: "Log in to comment." };
   const text = String(body ?? "").slice(0, 1000);
   const check = checkComment(text);
   if (check.action === "blocked") return { error: check.reason };
-  const { error } = await supabaseAdmin().rpc("create_comment", {
+  const { data, error } = await supabaseAdmin().rpc("create_comment", {
     p_user: user.id, p_post: postId, p_body: text, p_flag: check.action === "flag" ? check.flag : null,
   });
   if (error) return { error: msg(error.message) };
-  return { ok: true };
+  return { ok: true, live: data === "approved" };
 }
 
 const COMMENT_REPORT_REASONS = ["possible_minor", "non_consensual", "illegal", "spam", "personal_info", "other"];

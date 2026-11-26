@@ -5,9 +5,9 @@ import { approveComment, dismissCommentReports, rejectComment, removeComment } f
 
 // comments has two foreign keys to profiles (author and moderator), so the embed must name the author one.
 const AUTHOR = "profiles!comments_user_id_fkey(username)";
-const SEL = `id,body,created_at,flag,${AUTHOR},posts(title)`;
+const SEL = `id,body,created_at,flag,auto_approved,${AUTHOR},posts(title)`;
 
-type C = { id: string; body: string; created_at: string; flag: string | null; profiles: { username: string } | null; posts: { title: string | null } | null };
+type C = { id: string; body: string; created_at: string; flag: string | null; auto_approved?: boolean; profiles: { username: string } | null; posts: { title: string | null } | null };
 type R = { id: string; reason: string; details: string | null; created_at: string; comment: Omit<C, "flag" | "created_at"> & { status: string } };
 
 const FLAG_LABEL: Record<string, string> = {
@@ -46,10 +46,11 @@ export async function CommentsQueue() {
   }
   const reported = [...grouped.values()];
 
-  const row = (c: { id: string; body: string; profiles: { username: string } | null; posts: { title: string | null } | null }, when: string, flag: string | null, actions: React.ReactNode) => (
+  const row = (c: { id: string; body: string; auto_approved?: boolean; profiles: { username: string } | null; posts: { title: string | null } | null }, when: string, flag: string | null, actions: React.ReactNode) => (
     <li key={c.id} className={`rounded-2xl border bg-card p-4 text-sm ${flag ? "border-amber-400/60" : "border-line"}`}>
       <p className="text-xs text-muted">@{c.profiles?.username} on “{c.posts?.title ?? "Untitled"}” · {ago(when)} ago</p>
       {flag && <p className="mt-2"><Badge tone="warn">{FLAG_LABEL[flag] ?? flag}</Badge></p>}
+      {c.auto_approved && <p className="mt-2"><Badge tone="info">Auto-approved (trusted account)</Badge></p>}
       <p className="mt-2 whitespace-pre-wrap">{c.body}</p>
       <div className="mt-3 flex gap-2">{actions}</div>
     </li>
